@@ -19,6 +19,22 @@ Beyond applying this methods, I have a strong interest in mechanistic interpreta
 
 ## Skills Summary
 ### Programming Languages
-* Python
-* R
-* SQL
+* Deep Learning and LLMs:
+  * Pretraining and finetuning LLMs, specifically genome language models (gLMs)
+  * Training models on TPUs using high-performance libraries (JAX)
+  * Developing and applying deep learning models for genomic analysis
+* Mechanistic Interpretability:
+  * Training and utilizing techniques like sparse autoencoders (SAEs) to identify and understand human-interpretable latent features within neural networks
+* Programming and Data Science:
+  * Proficient in Python (including core data science libraries like NumPy, Pandas, Scikit-learn) and R
+  * Solid foundation in traditional machine learning algorithms (e.g., Logistic Regression, Linear Regression, SVMs)
+* Bioinformatics and Genomics Tools:
+  * Familiar with standard bioinformatics pipeles and tools for sequence analysis, alignment, quantification, peak calling, and data manipulation:
+    * Quality Control: FastQC
+    * Alignment: STAR, HISAT2
+    * Sequence Manipulation/Analysis: Samtools, BedTools
+    * Quantification: Kallisto
+    * Peak Calling: MACS
+    * Visualization/Downstream Analysis: DeepTools
+* Statistical Software:
+  * Experience with statistical analysis using Stata
