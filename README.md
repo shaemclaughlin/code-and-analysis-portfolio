@@ -286,3 +286,5 @@ def fwd_sae(sae_weights, activations):
 # Get function to compute gradients along with loss and internals
 grad_sae = jax.value_and_grad(fwd_sae, has_aux=True)
 ```
+
+
