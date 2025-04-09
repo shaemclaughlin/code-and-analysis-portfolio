@@ -58,7 +58,7 @@ Beyond applying these methods, I have a strong interest in mechanistic interpret
 * Understood how outlier variants can significantly influence MR results and the importance of methods to detect and account for them.
 * Developed skills in interpreting results from various MR methods and sensitivity tests to draw robust conclusions.
 
-**Code Samples**:
+**Code Examples**:
 * Loading libraries and formatting data:
 ```
 # Packages
@@ -223,4 +223,66 @@ def forward_layer(
 
     # Return output embeddings and updated K/V (used in caching)
     return x, k, v
+```
+### Project 3: Sparse Autoencoder for Interpreting Genome Language Model Activations
+**Project Description:** While large language models like Nucleotide GPT can learn complex patterns in genomic data, understanding how they represent this information internally remains a challenge. This project focused on applying a Sparse Autoencoder (SAE) to the intermediate activations of the pre-trained Nucleotide GPT model to uncover interpretable features within its learned representations.
+
+An SAE is an unsupervised neural network trained to reconstruct its input via a bottleneck layer that is typically larger (overcomplete) than the input dimension but constrained by a sparsity penalty (L1 regularization). This encourages the SAE to learn a sparse, distributed code where only a few "features" in the latent space are active for any given input. The goal was to train an SAE on the activations from the middle layer (layer 6 of 12) of Nucleotide GPT (2048 dimensions), mapping them to a larger, sparser latent space (8192 dimensions) before reconstructing the original activations. By analyzing which DNA sequences maximally activate specific latent features in the trained SAE, we aimed to identify biologically meaningful patterns learned by the underlying transformer model. The SAE was implemented and trained using JAX.
+
+**Analysis and Results:** The SAE was trained on the residual stream activations from Nucleotide GPT's middle layer. After training, we identified the top DNA sequences that maximally activated each of the 8192 latent SAE features. These sequences were then analyzed using bioinformatics tools (MEME Tomtom for motifs, Dfam for repeats) to determine if the learned features corresponded to known biological elements.
+* Repetitive Element Detection: Several distinct SAE features were found to consistently activate on sequences corresponding to specific families of repetitive elements, including components of LTR retrotransposons (THE1D-int, MLT2A) and different functional regions of LINE-1 elements (5' UTR, ORF2, 3' UTR). This indicates the SAE successfully decomposed the transformer's representation into features sensitive to these common genomic elements.
+* Potential Motif Alignment: One feature showed alignment to a known motif for the transcription factor ZNF460. While intriguing, this could also reflect the model recognizing repetitive sequences often bound by KRAB-zinc finger proteins like ZNF460, highlighting the complexity of interpreting learned features.
+
+**Key Learnings:**
+* Gained practical experience implementing and training Sparse Autoencoders using JAX, including defining the architecture, loss function (MSE reconstruction + L1 sparsity), and optimization steps.
+* Learned techniques for applying SAEs to interpret the internal activations of a pre-trained transformer model.
+* Developed a workflow for analyzing learned SAE features by identifying maximally activating input sequences and correlating them with biological annotations using standard bioinformatics tools (motif databases, repeat databases).
+* Understood the concept of using overcomplete, sparse representations to potentially disentangle complex features learned by deep learning models.
+
+**Code Examples:**
+* SAE Forward Pass and Loss: Defines the autoencoder structure (encoder, ReLU, decoder) and calculates reconstruction (MSE) and sparsity (L1) losses.
+```
+def fwd_sae(sae_weights, activations):
+    """
+    Forward pass for the Sparse Autoencoder.
+
+    Args:
+        sae_weights: Dictionary containing 'expand' (encoder) and 'contract' (decoder) weights.
+        activations: Input activations from the transformer model [Batch*Time, Dim_model].
+
+    Returns:
+        Tuple: (Total loss, Dictionary of intermediate values and losses).
+    """
+    # Encode: Project activations to the higher-dimensional latent space
+    # [B*T, D_model] @ [D_model, D_sae] -> [B*T, D_sae]
+    latents_pre_relu = jnp.einsum('bd,df->bf', activations, sae_weights['expand'])
+
+    # Apply ReLU activation - encourages sparsity
+    latents = jax.nn.relu(latents_pre_relu) # [B*T, D_sae]
+
+    # Decode: Reconstruct original activations from the sparse latent representation
+    # [B*T, D_sae] @ [D_sae, D_model] -> [B*T, D_model]
+    reconstructed = jnp.einsum('bf,fd->bd', latents, sae_weights['contract'])
+
+    # --- Loss Calculation ---
+    # 1. Reconstruction Loss (Mean Squared Error)
+    reconstruction_loss = jnp.mean((reconstructed - activations)**2)
+
+    # 2. L1 Sparsity Loss (encourages latent features to be zero)
+    # Applied to the activated latent features
+    l1_loss = l1_coeff * jnp.mean(jnp.abs(latents))
+
+    # Total loss combines reconstruction and sparsity penalties
+    total_loss = reconstruction_loss + l1_loss
+
+    # Return loss and dictionary of useful metrics/internals
+    return total_loss, {
+        'latents': latents, # Sparse activations
+        'reconstruction_loss': reconstruction_loss,
+        'l1_loss': l1_loss,
+        'nonzero_fraction': jnp.mean(latents > 0) # Fraction of non-zero latent features
+    }
+
+# Get function to compute gradients along with loss and internals
+grad_sae = jax.value_and_grad(fwd_sae, has_aux=True)
 ```
